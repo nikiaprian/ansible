@@ -1,0 +1,57 @@
+---
+- name: install docker
+  hosts: docker
+  become: true
+  tasks:
+    - name: install dependencies
+      apt :
+        name: "{{}}"
+        state: present
+        update_cache: yes
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - software-properties-common
+
+    - name: add GPG key
+      apt_key: 
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+    
+    - name: add docker repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: install docker
+      apt :
+        name: "{{item}}"
+        state: latest
+        update_cache: yes
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.co
+
+    - name: start docker service
+      service: 
+        name: docker
+        state: started
+        enabled: yes
+
+    # - name: install ca-certificates
+    #   apt:
+    #     name: ca-certificates
+    #     state: present
+    #     update_cache: yes
+
+  handlers:
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted
+  
+# - name: webserver
+#   hosts: webserver
