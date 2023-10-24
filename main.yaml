@@ -3,9 +3,11 @@
   hosts: docker
   become: true
   tasks:
+    - name: Run dpkg --configure -a
+      shell: dpkg --configure -a
     - name: install dependencies
       apt :
-        name: "{{}}"
+        name: "{{item}}"
         state: present
         update_cache: yes
       loop:
@@ -33,7 +35,7 @@
       loop:
         - docker-ce
         - docker-ce-cli
-        - containerd.co
+        - containerd.io
 
     - name: start docker service
       service: 
