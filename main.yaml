@@ -1,6 +1,6 @@
 ---
 - name: install docker
-  hosts: docker
+  hosts: all
   become: true
   tasks:
     - name: Run dpkg --configure -a
