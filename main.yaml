@@ -6,9 +6,6 @@
     - name: Run dpkg --configure -a
       shell: dpkg --configure -a
 
-    - name: buat file kosong
-      shell: touch /home/ubuntu/ansible/anjay.py
-
     - name: install dependencies
       apt :
         name: "{{item}}"
