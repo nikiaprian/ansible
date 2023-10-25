@@ -1,28 +1,35 @@
-#!/usr/bin/python
+import boto3
 import json
-import subprocess
+import os
 
-# Jalankan Terraform untuk mendapatkan alamat IP dari output
-terraform_command = "terraform output -json"
-output = subprocess.check_output(terraform_command, shell=True)
-terraform_output = json.loads(output)
+# Inisialisasi klien EC2 AWS
+ec2 = boto3.client('ec2', region_name='us-west-2')  # Ganti dengan wilayah yang sesuai
 
-# Definisikan nama EC2 secara manual
+# Tentukan nama-nama instance EC2 yang ingin Anda cari
 manual_ec2_names = ["docker01", "docker02"]
 
-dynamic_inventory = {}
+inventory_content = "[docker]\n"
 
-# Iterasi melalui nama EC2 yang telah Anda definisikan secara manual
 for ec2_name in manual_ec2_names:
-    # Dapatkan alamat IP dari output Terraform
-    ec2_ip = terraform_output["ec2_name_to_ip"]["value"][ec2_name]
-    
-    dynamic_inventory[ec2_name] = {
-        "ansible_ssh_host": ec2_ip,
-        "ansible_ssh_user": "ubuntu",
-        "ansible_become": True,
-        "ansible_become_password": "gameover213",
-        "ansible_ssh_common_args": "-o StrictHostKeyChecking=no"
-    }
+    # Dapatkan alamat IP publik berdasarkan nama instance
+    response = ec2.describe_instances(Filters=[
+        {'Name': 'tag:Name', 'Values': [ec2_name]}
+    ])
 
-print(json.dumps(dynamic_inventory))
+    if 'Reservations' in response:
+        for reservation in response['Reservations']:
+            for instance in reservation['Instances']:
+                ec2_ip = instance.get('PublicIpAddress')
+                if ec2_ip:
+                    inventory_content += (
+                        f"{ec2_name} ansible_ssh_host={ec2_ip} "
+                        f"ansible_ssh_private_key_file=/home/ubuntu/key/terrakey "
+                        f"ansible_user=ubuntu ansible_ssh_common_args='-o " 
+                        f"StrictHostKeyChecking=no' "
+                        f"ansible_become=True\n"
+                    )
+
+# Menyimpan hasil ke berkas inventory
+output_file = os.path.join(os.path.dirname(__file__), "ansible_inventory.ini")
+with open(output_file, "w") as outfile:
+    outfile.write(inventory_content)
